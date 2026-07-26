@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>坐标猎人</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1a1a1a;
+      color: #f5f5f5;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #ff8c00;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 20px;
+      font-size: 0.9em;
+    }
+
+    .game-container {
+      display: flex;
+      gap: 30px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .grid-container {
+      position: relative;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(11, 40px);
+      grid-template-rows: repeat(11, 40px);
+      border: 2px solid #ff8c00;
+      background: #0d0d0d;
+    }
+
+    .cell {
+      width: 40px;
+      height: 40px;
+      border: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #555;
+      position: relative;
+    }
+
+    .cell::before {
+      content: '';
+      position: absolute;
+      width: 1px;
+      height: 100%;
+      left: 50%;
+      background: #222;
+    }
+
+    .cell::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 1px;
+      top: 50%;
+      background: #222;
+    }
+
+    .cell.x-axis {
+      color: #666;
+      font-weight: bold;
+    }
+
+    .cell.y-axis {
+      color: #666;
+      font-weight: bold;
+    }
+
+    .cell.found {
+      background: #ff8c00;
+      color: #1a1a1a;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .cell.found::before, .cell.found::after {
+      display: none;
+    }
+
+    .cell.origin {
+      background: #333;
+    }
+
+    .axis-labels {
+      position: absolute;
+      font-size: 11px;
+      color: #666;
+    }
+
+    .axis-labels.x-labels {
+      bottom: -20px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      padding: 0 20px;
+    }
+
+    .axis-labels.y-labels {
+      left: -25px;
+      top: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    .info-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      min-width: 200px;
+    }
+
+    .info-box {
+      background: #0d0d0d;
+      border: 2px solid #ff8c00;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .info-box .label {
+      color: #888;
+      font-size: 0.8em;
+      margin-bottom: 5px;
+    }
+
+    .info-box .value {
+      font-size: 2em;
+      color: #ff8c00;
+      font-weight: bold;
+    }
+
+    .timer {
+      color: #f5f5f5;
+    }
+
+    .timer.warning {
+      color: #ff4444;
+      animation: blink 0.5s infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .input-area {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .input-area input {
+      background: #0d0d0d;
+      border: 2px solid #ff8c00;
+      color: #f5f5f5;
+      padding: 10px;
+      font-family: inherit;
+      font-size: 1.2em;
+      text-align: center;
+      outline: none;
+    }
+
+    .input-area input:focus {
+      border-color: #ffaa00;
+      box-shadow: 0 0 10px rgba(255, 140, 0, 0.3);
+    }
+
+    .input-area button {
+      background: #ff8c00;
+      color: #1a1a1a;
+      border: none;
+      padding: 10px 20px;
+      font-family: inherit;
+      font-size: 1em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .input-area button:hover {
+      background: #ffaa00;
+      transform: scale(1.02);
+    }
+
+    .input-area button:disabled {
+      background: #555;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .message {
+      min-height: 24px;
+      color: #4caf50;
+      font-size: 0.9em;
+      text-align: center;
+    }
+
+    .message.error {
+      color: #ff4444;
+    }
+
+    .btn-restart {
+      background: transparent;
+      border: 2px solid #ff8c00;
+      color: #ff8c00;
+      padding: 10px 20px;
+      font-family: inherit;
+      font-size: 1em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-restart:hover {
+      background: #ff8c00;
+      color: #1a1a1a;
+    }
+
+    .found-list {
+      font-size: 0.85em;
+      color: #888;
+      margin-top: 5px;
+    }
+
+    .instructions {
+      color: #666;
+      font-size: 0.75em;
+      text-align: center;
+      margin-top: 20px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 坐标猎人</h1>
+  <p class="subtitle">在60秒内找出所有隐藏坐标！</p>
+
+  <div class="game-container">
+    <div class="grid-container">
+      <div class="grid" id="grid"></div>
+      <div class="axis-labels x-labels" id="x-labels"></div>
+      <div class="axis-labels y-labels" id="y-labels"></div>
+    </div>
+
+    <div class="info-panel">
+      <div class="info-box">
+        <div class="label">⏱️ 剩余时间</div>
+        <div class="value timer" id="timer">60</div>
+      </div>
+
+      <div class="info-box">
+        <div class="label">🎯 得分</div>
+        <div class="value" id="score">0 / 10</div>
+        <div class="found-list" id="found-list"></div>
+      </div>
+
+      <div class="input-area">
+        <input type="text" id="guess" placeholder="输入坐标，如: 2,-3" maxlength="10">
+        <button id="submit">猜测！</button>
+      </div>
+
+      <div class="message" id="message"></div>
+
+      <button class="btn-restart" id="restart">🔄 重新开始</button>
+    </div>
+  </div>
+
+  <p class="instructions">
+    输入格式：x,y（如：2,-3）<br>
+    坐标范围：x 和 y 都是 -5 到 5 的整数
+  </p>
+
+  <script>
+    const GRID_SIZE = 11;
+    const HIDDEN_COUNT = 10;
+    const TIME_LIMIT = 60;
+
+    let hiddenCoords = [];
+    let foundCoords = [];
+    let timeLeft = TIME_LIMIT;
+    let timerInterval = null;
+    let gameOver = false;
+
+    const grid = document.getElementById('grid');
+    const xLabels = document.getElementById('x-labels');
+    const yLabels = document.getElementById('y-labels');
+    const timerDisplay = document.getElementById('timer');
+    const scoreDisplay = document.getElementById('score');
+    const foundListDisplay = document.getElementById('found-list');
+    const guessInput = document.getElementById('guess');
+    const submitBtn = document.getElementById('submit');
+    const messageDisplay = document.getElementById('message');
+    const restartBtn = document.getElementById('restart');
+
+    function initGame() {
+      hiddenCoords = [];
+      foundCoords = [];
+      timeLeft = TIME_LIMIT;
+      gameOver = false;
+
+      // 生成不重复的隐藏坐标
+      const allCoords = [];
+      for (let x = -5; x <= 5; x++) {
+        for (let y = -5; y <= 5; y++) {
+          allCoords.push({ x, y });
+        }
+      }
+
+      // 随机选取10个
+      for (let i = 0; i < HIDDEN_COUNT; i++) {
+        const idx = Math.floor(Math.random() * allCoords.length);
+        hiddenCoords.push(allCoords.splice(idx, 1)[0]);
+      }
+
+      renderGrid();
+      updateDisplay();
+      startTimer();
+
+      guessInput.value = '';
+      guessInput.disabled = false;
+      submitBtn.disabled = false;
+      messageDisplay.textContent = '';
+      messageDisplay.className = 'message';
+    }
+
+    function renderGrid() {
+      grid.innerHTML = '';
+
+      // 渲染轴标签
+      xLabels.innerHTML = '';
+      yLabels.innerHTML = '';
+
+      for (let i = 0; i < GRID_SIZE; i++) {
+        const xVal = 5 - i; // -5 到 5
+        const xLabel = document.createElement('span');
+        xLabel.textContent = xVal;
+        xLabels.appendChild(xLabel);
+
+        const yLabel = document.createElement('span');
+        yLabel.textContent = xVal;
+        yLabels.appendChild(yLabel);
+      }
+
+      // 渲染网格 (从左上角 y=5 到右下角 y=-5)
+      for (let row = 0; row < GRID_SIZE; row++) {
+        for (let col = 0; col < GRID_SIZE; col++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+
+          const y = 5 - row;  // y 从 5 到 -5
+          const x = col - 5;  // x 从 -5 到 5
+
+          // 原点
+          if (x === 0 && y === 0) {
+            cell.classList.add('origin');
+            cell.textContent = '·';
+          }
+
+          // 轴标签
+          if (y === 0) cell.classList.add('x-axis');
+          if (x === 0) cell.classList.add('y-axis');
+
+          cell.dataset.x = x;
+          cell.dataset.y = y;
+
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    function updateDisplay() {
+      timerDisplay.textContent = timeLeft;
+      timerDisplay.className = timeLeft <= 10 ? 'value timer warning' : 'value timer';
+
+      scoreDisplay.textContent = `${foundCoords.length} / ${HIDDEN_COUNT}`;
+      foundListDisplay.textContent = foundCoords.length > 0
+        ? `已找到: ${foundCoords.map(c => `(${c.x},${c.y})`).join(' ')}`
+        : '';
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateDisplay();
+
+        if (timeLeft <= 0) {
+          endGame(false);
+        }
+      }, 1000);
+    }
+
+    function endGame(won) {
+      gameOver = true;
+      clearInterval(timerInterval);
+
+      guessInput.disabled = true;
+      submitBtn.disabled = true;
+
+      if (won) {
+        messageDisplay.textContent = '🎉 太棒了！全部找到！';
+        messageDisplay.className = 'message';
+      } else {
+        messageDisplay.textContent = `⏰ 时间到！得分 ${foundCoords.length}/${HIDDEN_COUNT}`;
+        messageDisplay.className = 'message error';
+        // 显示所有隐藏坐标
+        showAllCoords();
+      }
+    }
+
+    function showAllCoords() {
+      hiddenCoords.forEach(coord => {
+        const cell = grid.querySelector(`[data-x="${coord.x}"][data-y="${coord.y}"]`);
+        if (cell) {
+          cell.classList.add('found');
+          cell.textContent = '★';
+        }
+      });
+    }
+
+    function checkGuess(input) {
+      const cleaned = input.trim();
+
+      // 解析坐标
+      const match = cleaned.match(/^-?\d+,-?\d+$/);
+      if (!match) {
+        return { valid: false, message: '格式错误！请输入如 2,-3' };
+      }
+
+      const [x, y] = cleaned.split(',').map(Number);
+
+      if (x < -5 || x > 5 || y < -5 || y > 5) {
+        return { valid: false, message: '坐标超出范围！x 和 y 都必须是 -5 到 5' };
+      }
+
+      // 检查是否已找到
+      if (foundCoords.some(c => c.x === x && c.y === y)) {
+        return { valid: false, message: `(${x},${y}) 已经找到了！` };
+      }
+
+      // 检查是否是隐藏坐标
+      const found = hiddenCoords.some(c => c.x === x && c.y === y);
+
+      if (found) {
+        foundCoords.push({ x, y });
+        const cell = grid.querySelector(`[data-x="${x}"][data-y="${y}"]`);
+        if (cell) {
+          cell.classList.add('found');
+          cell.textContent = '✓';
+        }
+
+        if (foundCoords.length === HIDDEN_COUNT) {
+          endGame(true);
+        }
+
+        return { valid: true, message: '🎯 命中！', found: true };
+      } else {
+        return { valid: true, message: '💨 没命中，继续找！', found: false };
+      }
+    }
+
+    // 事件监听
+    submitBtn.addEventListener('click', () => {
+      if (gameOver) return;
+
+      const result = checkGuess(guessInput.value);
+      messageDisplay.textContent = result.message;
+      messageDisplay.className = result.valid ? 'message' : 'message error';
+
+      if (result.valid) {
+        guessInput.value = '';
+        guessInput.focus();
+        updateDisplay();
+      }
+    });
+
+    guessInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !gameOver) {
+        submitBtn.click();
+      }
+    });
+
+    restartBtn.addEventListener('click', () => {
+      // 清除所有 found 标记
+      document.querySelectorAll('.cell.found').forEach(cell => {
+        cell.classList.remove('found');
+        if (cell.dataset.x === '0' && cell.dataset.y === '0') {
+          cell.textContent = '·';
+        } else {
+          cell.textContent = '';
+        }
+      });
+      initGame();
+    });
+
+    // 启动游戏
+    initGame();
+  </script>
+</body>
+</html>
